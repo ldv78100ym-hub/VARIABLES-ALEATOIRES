@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variables Aléatoires, Loi de Bernoulli et Problèmes</title>
+    
+    <!-- Configuration de MathJax 3 -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        /* Variables CSS pour l'accessibilité (Mal voyants / Dys) */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --accent-color: #0056b3;
+            --box-bg: #f8f9fa;
+            --border-color: #dddddd;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --line-height: 1.6;
+            --letter-spacing: normal;
+            --font-size: 16px;
+        }
+
+        body.dys-mode {
+            --font-family: 'Comic Sans MS', cursive, sans-serif;
+            --line-height: 2;
+            --letter-spacing: 0.1em;
+            --font-size: 18px;
+        }
+
+        body.high-contrast-mode {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --accent-color: #4da6ff;
+            --box-bg: #1e1e1e;
+            --border-color: #555555;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: var(--line-height);
+            letter-spacing: var(--letter-spacing);
+            font-size: var(--font-size);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: #ffffff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .course-box, .qcm-container, .setup-container {
+            background-color: var(--box-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .definition-title {
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+        
+        .sub-title {
+            color: var(--text-color);
+            font-weight: bold;
+            margin-top: 15px;
+            text-decoration: underline;
+        }
+
+        .problem-context {
+            background-color: rgba(0, 86, 179, 0.05);
+            border-left: 5px solid var(--accent-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        canvas {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            display: block;
+            margin: 15px auto;
+            max-width: 100%;
+        }
+
+        table.prob-table {
+            width: 100%;
+            text-align: center;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background-color: var(--bg-color);
+        }
+
+        table.prob-table th, table.prob-table td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+        }
+
+        /* 
+           RÈGLES STRICTES POUR ÉVITER LE BUG MATHJAX À L'IMPRESSION :
+           Aucun 'display: none' n'est utilisé, ni pour les corrections, ni pour les diapositives.
+        */
+        .question-slide {
+            position: absolute;
+            visibility: hidden;
+            opacity: 0;
+            z-index: -1;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .question-slide.active {
+            position: relative;
+            visibility: visible;
+            opacity: 1;
+            z-index: 1;
+            height: auto;
+            overflow: visible;
+        }
+
+        .correction-block {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0 15px;
+            background-color: #e6f7ff;
+            border-left: 4px solid var(--accent-color);
+            transition: opacity 0.3s ease;
+        }
+
+        .correction-block.visible {
+            max-height: 5000px;
+            opacity: 1;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .choice-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .choice-list li {
+            margin: 10px 0;
+        }
+
+        .choice-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: var(--bg-color);
+        }
+
+        .choice-label input {
+            margin-right: 15px;
+        }
+
+        .choice-label:hover {
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+        
+        .open-answer-box {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-family: var(--font-family);
+            font-size: var(--font-size);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            resize: vertical;
+        }
+
+        #timer-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #d9534f;
+            text-align: right;
+            margin-bottom: 10px;
+        }
+
+        .module-selector {
+            margin: 15px 0;
+        }
+        
+        .module-selector label {
+            display: block;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Styles d'impression */
+        @media print {
+            body { background: white; color: black; font-size: 12pt; }
+            .controls, #setup-section, #qcm-navigation, .no-print { display: none !important; }
+            
+            /* Tout révéler pour le PDF */
+            .question-slide { 
+                position: relative !important; 
+                visibility: visible !important; 
+                opacity: 1 !important; 
+                height: auto !important; 
+                margin-bottom: 30px !important; 
+                page-break-inside: avoid !important; 
+            }
+            
+            .correction-block {
+                max-height: none !important;
+                opacity: 1 !important;
+                padding: 15px !important;
+                margin: 15px 0 !important;
+                overflow: visible !important;
+                border: 1px solid #000;
+            }
+        }
+
+        /* Modal Droits d'auteur */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0; 
+            width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.5); 
+        }
+        .modal-content {
+            background-color: var(--box-bg);
+            color: var(--text-color);
+            margin: 15% auto; 
+            padding: 20px; 
+            border: 1px solid var(--accent-color); 
+            width: 80%; 
+            max-width: 600px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Variables Aléatoires et Modélisation</h1>
+        <div class="controls no-print">
+            <button onclick="toggleDys()">Mode Dys</button>
+            <button onclick="toggleContrast()">Haut Contraste</button>
+            <button onclick="window.print()">Générer PDF (avec Corrections)</button>
+            <button onclick="openModal()">Droits d'auteur</button>
+        </div>
+    </header>
+
+    <div class="course-box no-print" id="cours">
+        <h2 class="definition-title">1. Les Variables Aléatoires Discrètes</h2>
+        
+        <p class="sub-title">A. Définition</p>
+        <p>Lorsqu'on réalise une expérience aléatoire, on s'intéresse souvent à un résultat chiffré (un gain à un jeu, la somme de deux dés, le nombre de pièces défectueuses, etc.).</p>
+        <p><strong>Variable Aléatoire :</strong> Une variable aléatoire (souvent notée $X$, $Y$ ou $Z$) est une fonction mathématique qui associe un nombre réel à chaque issue possible d'une expérience aléatoire. On dit qu'elle est <em>discrète</em> si elle prend un nombre fini (ou dénombrable) de valeurs isolées.</p>
+        
+        <div style="background-color: rgba(0,0,0,0.03); padding: 10px; border-left: 4px solid #6c757d; margin: 10px 0;">
+            <strong>Exemple d'introduction :</strong> Imaginons un jeu où l'on tire une boule dans une urne contenant $10$ boules : $1$ boule rouge (qui rapporte $8$€), $2$ boules bleues (qui rapportent $3$€) et $7$ boules noires (qui font perdre $2$€). La variable aléatoire $X$, représentant le gain algébrique du joueur, prend les valeurs : 
+            $$x_1 = 8 \quad ; \quad x_2 = 3 \quad ; \quad x_3 = -2$$
+        </div>
+
+        <p class="sub-title">B. Loi de Probabilité</p>
+        <p><strong>Définition :</strong> Définir la loi de probabilité d'une variable aléatoire discrète $X$, c'est déterminer toutes les valeurs possibles $x_1, x_2, \dots, x_n$ prises par $X$, et calculer la probabilité $P(X = x_i)$ associée à chacune de ces valeurs.</p>
+        <p><strong>Propriété fondamentale :</strong> La somme des probabilités de toutes les valeurs possibles est strictement égale à $1$.</p>
+        $$\sum_{i=1}^{n} P(X = x_i) = P(X = x_1) + P(X = x_2) + \dots + P(X = x_n) = 1$$
+        
+        <p><em>Application sur l'exemple :</em></p>
+        <ul>
+            <li>$P(X = 8) = \dfrac{1}{10}$ (Une seule boule rouge sur 10)</li>
+            <li>$P(X = 3) = \dfrac{2}{10} = \dfrac{1}{5}$ (Fraction irréductible)</li>
+            <li>$P(X = -2) = \dfrac{7}{10}$</li>
+        </ul>
+        <table class="prob-table">
+            <tr>
+                <th>Valeurs $x_i$</th>
+                <td>$-2$</td>
+                <td>$3$</td>
+                <td>$8$</td>
+            </tr>
+            <tr>
+                <th>$P(X = x_i)$</th>
+                <td>$\dfrac{7}{10}$</td>
+                <td>$\dfrac{1}{5}$</td>
+                <td>$\dfrac{1}{10}$</td>
+            </tr>
+        </table>
+
+        <p class="sub-title">C. Indicateurs de Position et de Dispersion</p>
+        <p><strong>L'Espérance Mathématique $E(X)$ :</strong> Elle représente la valeur moyenne théorique que l'on peut espérer obtenir si l'on répète l'expérience un très grand nombre de fois.</p>
+        $$E(X) = \sum_{i=1}^{n} x_i \times P(X = x_i)$$
+        <p><em>Calcul sur l'exemple :</em> $E(X) = -2 \times \left(\dfrac{7}{10}\right) + 3 \times \left(\dfrac{1}{5}\right) + 8 \times \left(\dfrac{1}{10}\right) = -\dfrac{14}{10} + \dfrac{6}{10} + \dfrac{8}{10} = 0$. (Le jeu est équitable).</p>
+        
+        <p><strong>La Variance $V(X)$ et l'Écart-Type $\sigma(X)$ :</strong> Ils mesurent la dispersion des valeurs autour de l'espérance. Plus ces indicateurs sont grands, plus les résultats fluctuent.</p>
+        $$V(X) = E(X^2) - (E(X))^2$$
+        <p><em>Calcul sur l'exemple :</em> $V(X) = (-2)^2 \times \dfrac{7}{10} + (3)^2 \times \dfrac{1}{5} + (8)^2 \times \dfrac{1}{10} = 4 \times \dfrac{7}{10} + 9 \times \dfrac{2}{10} + 64 \times \dfrac{1}{10} = \dfrac{110}{10} = 11$.</p>
+        <p>L'écart-type est la racine carrée de la variance : $\sigma(X) = \sqrt{V(X)}$. Dans l'exemple : $\sigma(X) = \sqrt{11}$.</p>
+        
+        <p><strong>Propriétés :</strong> Pour tous nombres réels $a$ et $b$ :</p>
+        <ul>
+            <li>$E(aX + b) = a \times E(X) + b$ : L'espèrence est dite <strong>linéaire</strong></li>
+            <li>$V(aX + b) = a^2 \times V(X)$</li>
+        </ul>
+
+        <hr>
+
+        <h2 class="definition-title">2. La Loi de Bernoulli</h2>
+        <p>Une <strong>épreuve de Bernoulli</strong> est une expérience aléatoire qui ne comporte que deux issues possibles :</p>
+        <ul>
+            <li>Le <strong>Succès</strong> (noté $S$), de probabilité $p$.</li>
+            <li>L'<strong>Échec</strong> (noté $\overline{S}$), de probabilité $1 - p$.</li>
+        </ul>
+        <p><strong>Loi de Bernoulli :</strong> Une variable aléatoire $X$ suit une loi de Bernoulli de paramètre $p$ si elle associe la valeur $1$ au succès et $0$ à l'échec. On a alors : $P(X = 1) = p$ et $P(X = 0) = 1 - p$.</p>
+        <p><strong>Propriétés :</strong> En appliquant les formules générales de la partie 1 à ces deux uniques valeurs, on démontre que l'espérance est $E(X) = p$ et la variance est $V(X) = p(1-p)$.</p>
+
+        <canvas id="bernoulliTree" width="400" height="200" aria-label="Arbre de probabilité de l'épreuve de Bernoulli"></canvas>
+    </div>
+
+    <div class="setup-container no-print" id="setup-section">
+        <h2 class="definition-title">Configuration du parcours</h2>
+        <p>Choisissez les exercices que vous souhaitez traiter. Le QCM propose des choix de réponses, tandis que les problèmes à tiroirs demandent de rédiger votre réponse étape par étape.</p>
+        
+        <div class="module-selector">
+            <label><input type="checkbox" id="mod-qcm" value="qcm" checked> 1. QCM d'entraînement (Questions indépendantes)</label>
+            <label><input type="checkbox" id="mod-sti2d" value="sti2d" checked> 2. Problème d'entreprise (STI2D - Questions ouvertes à tiroirs)</label>
+            <label><input type="checkbox" id="mod-stl" value="stl" checked> 3. Problème de laboratoire (STL - Questions ouvertes à tiroirs)</label>
+        </div>
+
+        <hr>
+        <p>Options de temps :</p>
+        <div>
+            <input type="radio" id="mode-manuel" name="timing-mode" value="manuel" checked>
+            <label for="mode-manuel">Passage manuel (Sans chronomètre)</label>
+        </div>
+        <div style="margin-top:10px;">
+            <input type="radio" id="mode-chrono" name="timing-mode" value="chrono">
+            <label for="mode-chrono">Avec chronomètre (Enregistré dans le suivi)</label>
+        </div>
+        <br>
+        <button onclick="startSession()">Démarrer la séance</button>
+    </div>
+
+    <div class="qcm-container" id="qcm-section" style="display:none;">
+        <div id="timer-display" class="no-print" style="display:none;">Temps: 0s</div>
+        
+        <form id="qcm-form">
+            <!-- Les questions générées -->
+        </form>
+
+        <div id="qcm-navigation" class="controls" style="margin-top: 20px;">
+            <button id="btn-validate" onclick="validateCurrentQuestion()" type="button" style="background-color: #ff9800;">Valider la réponse</button>
+            <button id="btn-next" onclick="nextQuestion()" type="button" style="display:none;">Question suivante</button>
+            <button id="btn-finish" onclick="finishSession()" type="button" style="display:none; background-color: #28a745;">Terminer l'exercice</button>
+            <button id="btn-json" onclick="exportJSON()" type="button" style="display:none; background-color: #17a2b8;">Télécharger Résultats (JSON)</button>
+        </div>
+    </div>
+
+    <!-- Modal Droits d'auteur -->
+    <div id="copyrightModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">⚖️ Droits d'Auteur et Licence d'Utilisation</h3>
+            <p><strong>Auteur :</strong> Yann Merdy (yann.merdy@gmail.com) - Mai 2026</p>
+            <p><strong>Licence d'Utilisation Non Commerciale</strong><br>
+            Ce code HTML/CSS/JavaScript ainsi que le contenu généré par l'application ('Exercices - Variables aléatoires') sont la propriété intellectuelle exclusive de l'auteur, Yann Merdy.</p>
+            <p><strong>Conditions :</strong><br>
+            <strong>Utilisation Privée et Éducative (Autorisée) :</strong> Vous êtes autorisé.e à utiliser, copier, modifier et distribuer ce code et son contenu uniquement à des fins personnelles, éducatives et non lucratives.<br>
+            <strong>Utilisation Commerciale (Interdite) :</strong> Toute utilisation, distribution, intégration ou reproduction du code ou du contenu (total ou partiel) à des fins commerciales, lucratives ou professionnelles est strictement interdite sans un accord écrit préalable et explicite de l'auteur.<br>
+            <strong>Attribution :</strong> Toute reproduction ou modification doit conserver la mention de l'auteur originale (Yann Merdy) et la présente notice de droits d'auteur.</p>
+            <button onclick="closeModal()">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        function drawTree() {
+            const canvas = document.getElementById('bernoulliTree');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.font = '16px Arial';
+            ctx.fillStyle = document.body.classList.contains('high-contrast-mode') ? '#fff' : '#000';
+            ctx.strokeStyle = document.body.classList.contains('high-contrast-mode') ? '#fff' : '#000';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.arc(50, 100, 5, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(50, 100);
+            ctx.lineTo(200, 40);
+            ctx.moveTo(50, 100);
+            ctx.lineTo(200, 160);
+            ctx.stroke();
+
+            ctx.fillText('p', 120, 60);
+            ctx.fillText('1 - p', 110, 155);
+            ctx.fillText('S éq. à X = 1', 220, 45);
+            ctx.fillText('S\u0305 éq. à X = 0', 220, 165);
+        }
+
+        // Base de données structurée par modules
+        const allModules = {
+            "qcm": [
+                {
+                    id: "qcm_1",
+                    type: "qcm",
+                    title: "QCM - Question 1 : Arbre de probabilité",
+                    text: "Une urne contient 3 boules rouges et 2 boules noires. On tire une boule au hasard. Si elle est rouge, on gagne 10€, sinon on perd 5€. Soit $X$ la variable aléatoire représentant le gain algébrique. Quelle est la probabilité $P(X = 10)$ ?",
+                    choices: [
+                        { letter: 'A', text: "$\\dfrac{3}{5}$" },
+                        { letter: 'B', text: "$\\dfrac{2}{5}$" },
+                        { letter: 'C', text: "$\\dfrac{1}{2}$" },
+                        { letter: 'D', text: "$\\dfrac{3}{2}$" },
+                        { letter: 'E', text: "Autre" }
+                    ],
+                    correctAnswer: 'A',
+                    correction: "<strong>Correction didactique :</strong><br>Rappel de définition : L'événement $(X = 10)$ correspond au gain de 10€, obtenu uniquement si une boule rouge est tirée.<br>Propriété : En situation d'équiprobabilité, la probabilité est le quotient des issues favorables par le total des issues. Il y a 3 boules rouges pour un total de $3+2=5$ boules.<br>Donc $P(X = 10) = \\dfrac{3}{5}$. La fraction est irréductible. La réponse est la A."
+                },
+                {
+                    id: "qcm_2",
+                    type: "qcm",
+                    title: "QCM - Question 2 : Probabilités totales",
+                    text: "On a deux urnes $U_1$ et $U_2$. La probabilité de choisir $U_1$ est $\\dfrac{1}{3}$. Si l'on tire dans $U_1$, la probabilité d'obtenir un Succès (S) est $\\dfrac{1}{4}$. Si l'on tire dans $U_2$, la probabilité d'obtenir un Succès est $\\dfrac{1}{2}$. Quelle est la probabilité totale d'obtenir un Succès $P(S)$ ?",
+                    choices: [
+                        { letter: 'A', text: "$\\dfrac{1}{3}$" },
+                        { letter: 'B', text: "$\\dfrac{5}{12}$" },
+                        { letter: 'C', text: "$\\dfrac{1}{4}$" },
+                        { letter: 'D', text: "$\\dfrac{7}{12}$" },
+                        { letter: 'E', text: "Autre" }
+                    ],
+                    correctAnswer: 'B',
+                    correction: "<strong>Correction didactique :</strong><br>Théorème des probabilités totales : $P(S) = P(U_1) \\times P_{U_1}(S) + P(U_2) \\times P_{U_2}(S)$.<br>On sait que $P(U_1) = \\dfrac{1}{3}$, donc $P(U_2) = 1 - \\dfrac{1}{3} = \\dfrac{2}{3}$.<br>Calcul : $P(S) = \\dfrac{1}{3} \\times \\dfrac{1}{4} + \\dfrac{2}{3} \\times \\dfrac{1}{2} = \\dfrac{1}{12} + \\dfrac{2}{6}$.<br>Mise au même dénominateur : $\\dfrac{1}{12} + \\dfrac{4}{12} = \\dfrac{5}{12}$. La fraction est irréductible. La réponse est la B."
+                }
+            ],
+            "sti2d": [
+                {
+                    id: "sti2d_1",
+                    type: "open",
+                    title: "Problème STI2D (Entreprise) - Étape 1/4",
+                    context: "Une usine d'assemblage produit des engrenages. La probabilité qu'un engrenage pris au hasard présente un défaut d'usinage est de $\\dfrac{1}{25}$. On note $D$ la variable aléatoire prenant la valeur 1 si l'engrenage est défectueux (le 'succès') et 0 sinon.",
+                    text: "Quelle est la loi de probabilité suivie par la variable aléatoire $D$, et quel est son paramètre $p$ ?",
+                    attendu: "Loi de Bernoulli, paramètre p = 1/25",
+                    correction: "<strong>Correction didactique :</strong><br>Rappel : Une variable aléatoire modélisant une épreuve à deux issues (0 et 1) suit, par définition, une <strong>loi de Bernoulli</strong>.<br>Son paramètre $p$ est la probabilité d'obtenir la valeur 1 (le succès).<br>L'énoncé indique que la probabilité du défaut ($D=1$) est de $\\dfrac{1}{25}$. Le paramètre est donc $p = \\dfrac{1}{25}$."
+                },
+                {
+                    id: "sti2d_2",
+                    type: "open",
+                    title: "Problème STI2D (Entreprise) - Étape 2/4",
+                    context: "<em>À l'étape 1, nous avons établi que $D$ suit une loi de Bernoulli de paramètre $p = \\dfrac{1}{25}$.</em>",
+                    text: "En utilisant ce paramètre, calculez sous forme de fraction irréductible la variance $V(D)$ de cette variable aléatoire.",
+                    attendu: "24/625",
+                    correction: "<strong>Correction didactique :</strong><br>Rappel de cours : La variance d'une loi de Bernoulli est calculée par la formule $V(D) = p(1-p)$.<br>La probabilité de l'événement contraire est $1 - \\dfrac{1}{25} = \\dfrac{24}{25}$.<br>On applique la formule : $V(D) = \\dfrac{1}{25} \\times \\dfrac{24}{25}$.<br>On multiplie les numérateurs et les dénominateurs : $V(D) = \\dfrac{1 \\times 24}{25 \\times 25} = \\dfrac{24}{625}$. La fraction est irréductible."
+                },
+                {
+                    id: "sti2d_3",
+                    type: "open",
+                    title: "Problème STI2D (Entreprise) - Étape 3/4",
+                    context: "<em>(Suite)</em> Chaque engrenage sans défaut rapporte un gain net de 12€. Un engrenage défectueux doit être recyclé, causant une perte sèche de 3€ (gain de -3€).",
+                    text: "Soit $G$ la variable aléatoire représentant le gain algébrique en euros pour un engrenage. Exprimez algébriquement $G$ en fonction de $D$.",
+                    attendu: "G = 12 - 15D (ou -15D + 12)",
+                    correction: "<strong>Correction didactique :</strong><br>Méthodologie : Posons $G = a \\times D + b$ et étudions les deux cas possibles :<br>- Si l'engrenage est sans défaut ($D = 0$), le gain est de 12€. Donc $a \\times 0 + b = 12 \\Rightarrow b = 12$.<br>- Si l'engrenage est défectueux ($D = 1$), le gain est de -3€. Donc $a \\times 1 + 12 = -3 \\Rightarrow a = -15$.<br>L'expression finale est donc : $G = -15D + 12$, ou encore $G = 12 - 15D$."
+                },
+                {
+                    id: "sti2d_4",
+                    type: "open",
+                    title: "Problème STI2D (Entreprise) - Étape 4/4",
+                    context: "<em>À l'étape 3, nous avons trouvé $G = 12 - 15D$. L'usine veut connaître la rentabilité moyenne.</em>",
+                    text: "En utilisant la relation précédente et l'espérance $E(D)$, calculez le gain moyen espéré $E(G)$ sous forme de fraction irréductible.",
+                    attendu: "57/5",
+                    correction: "<strong>Correction didactique :</strong><br>Théorème de linéarité : $E(G) = E(12 - 15D) = -15 \\times E(D) + 12$.<br>D'après le cours, l'espérance d'une loi de Bernoulli vaut son paramètre : $E(D) = p = \\dfrac{1}{25}$.<br>Calcul : $E(G) = -15 \\times \\dfrac{1}{25} + 12$.<br>Simplification de la fraction : $-\\dfrac{15}{25} = -\\dfrac{3}{5}$.<br>Mise au même dénominateur : $E(G) = -\\dfrac{3}{5} + \\dfrac{60}{5} = \\dfrac{57}{5}$. La fraction est irréductible."
+                }
+            ],
+            "stl": [
+                {
+                    id: "stl_1",
+                    type: "open",
+                    title: "Problème STL (Laboratoire) - Étape 1/3",
+                    context: "Dans un laboratoire, une fiole de culture a une probabilité de $\\dfrac{3}{10}$ d'être contaminée par un agent externe. On note $C$ la variable de Bernoulli valant 1 si la fiole est contaminée, et 0 si elle est saine.",
+                    text: "Déterminez, en justifiant grâce au cours, la valeur de l'espérance mathématique $E(C)$.",
+                    attendu: "3/10",
+                    correction: "<strong>Correction didactique :</strong><br>Définition : $C$ suit une loi de Bernoulli de paramètre $p = \\dfrac{3}{10}$.<br>Théorème : L'espérance mathématique d'une variable suivant une loi de Bernoulli est égale à son paramètre $p$.<br>On a donc directement $E(C) = \\dfrac{3}{10}$."
+                },
+                {
+                    id: "stl_2",
+                    type: "open",
+                    title: "Problème STL (Laboratoire) - Étape 2/3",
+                    context: "<em>(Suite)</em> Le laboratoire dresse le bilan financier : une fiole saine ($C=0$) génère un profit de 50€. Une fiole contaminée ($C=1$) doit être incinérée, causant une perte (profit de -10€).",
+                    text: "Soit $B$ le bilan financier pour une fiole. Quelle est l'expression de $B$ en fonction de $C$ ?",
+                    attendu: "B = 50 - 60C",
+                    correction: "<strong>Correction didactique :</strong><br>Modélisons sous la forme $B = a \\times C + b$.<br>- Pour une fiole saine ($C=0$), le bilan est $B=50$. Donc $b = 50$.<br>- Pour une fiole contaminée ($C=1$), le bilan est $B=-10$. L'équation devient $a \\times 1 + 50 = -10$, ce qui donne $a = -60$.<br>La relation algébrique est donc $B = -60C + 50$ (ou $B = 50 - 60C$)."
+                },
+                {
+                    id: "stl_3",
+                    type: "open",
+                    title: "Problème STL (Laboratoire) - Étape 3/3",
+                    context: "<em>À l'étape précédente, nous avons établi $B = 50 - 60C$.</em>",
+                    text: "Utilisez la linéarité de l'espérance pour calculer la valeur (entière) du bilan financier moyen espéré $E(B)$.",
+                    attendu: "32",
+                    correction: "<strong>Correction didactique :</strong><br>Linéarité de l'espérance : $E(B) = E(50 - 60C) = -60 \\times E(C) + 50$.<br>Grâce à la question 1, nous savons que $E(C) = \\dfrac{3}{10}$.<br>On remplace : $E(B) = -60 \\times \\left(\\dfrac{3}{10}\\right) + 50$.<br>Calcul : $-60 \\times \\dfrac{3}{10} = -\\dfrac{180}{10} = -18$.<br>Addition finale : $E(B) = -18 + 50 = 32$. Le bilan moyen espéré est de 32€ par fiole."
+                }
+            ]
+        };
+
+        let runData = [];
+        let currentQuestionIndex = 0;
+        let isTimedMode = false;
+        let questionStartTime = 0;
+        let timerInterval = null;
+        let elapsedSeconds = 0;
+        let studentAnswers = [];
+
+        function startSession() {
+            runData = [];
+            if(document.getElementById('mod-qcm').checked) runData = runData.concat(allModules["qcm"]);
+            if(document.getElementById('mod-sti2d').checked) runData = runData.concat(allModules["sti2d"]);
+            if(document.getElementById('mod-stl').checked) runData = runData.concat(allModules["stl"]);
+
+            if(runData.length === 0) {
+                alert("Veuillez sélectionner au moins un module d'exercices.");
+                return;
+            }
+
+            const modeRadios = document.getElementsByName('timing-mode');
+            for(let r of modeRadios) {
+                if(r.checked) isTimedMode = (r.value === 'chrono');
+            }
+
+            document.getElementById('cours').style.display = 'none';
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('qcm-section').style.display = 'block';
+            
+            initQuestions();
+            
+            currentQuestionIndex = 0;
+            showSlide(currentQuestionIndex);
+            
+            questionStartTime = Date.now();
+            if (isTimedMode) {
+                document.getElementById('timer-display').style.display = 'block';
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+        }
+
+        function initQuestions() {
+            const form = document.getElementById('qcm-form');
+            form.innerHTML = '';
+
+            runData.forEach((q, index) => {
+                const slide = document.createElement('div');
+                slide.className = 'question-slide';
+                slide.id = 'slide-' + index;
+
+                let htmlContent = `<h3>${q.title}</h3>`;
+                
+                if (q.context) {
+                    htmlContent += `<div class="problem-context">${q.context}</div>`;
+                }
+
+                htmlContent += `<p>${q.text}</p>`;
+                
+                if(q.type === "qcm") {
+                    htmlContent += `<ul class="choice-list">`;
+                    q.choices.forEach(choice => {
+                        htmlContent += `
+                            <li>
+                                <label class="choice-label">
+                                    <input type="radio" name="q${index}" value="${choice.letter}">
+                                    <strong>${choice.letter}.</strong>&nbsp; ${choice.text}
+                                </label>
+                            </li>`;
+                    });
+                    htmlContent += `</ul>`;
+                } else if (q.type === "open") {
+                    htmlContent += `<textarea id="open-input-${index}" class="open-answer-box" placeholder="Rédigez votre calcul et votre réponse ici..."></textarea>`;
+                }
+                
+                htmlContent += `
+                    <div id="corr-${index}" class="correction-block">
+                        ${q.correction}
+                    </div>
+                `;
+
+                slide.innerHTML = htmlContent;
+                form.appendChild(slide);
+            });
+            
+            if (window.MathJax) { MathJax.typesetPromise(); }
+        }
+
+        function showSlide(index) {
+            const slides = document.querySelectorAll('.question-slide');
+            slides.forEach((s, i) => {
+                if(i === index) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+            
+            document.getElementById('btn-validate').style.display = 'inline-block';
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('btn-finish').style.display = 'none';
+        }
+
+        function updateTimer() {
+            elapsedSeconds = Math.floor((Date.now() - questionStartTime) / 1000);
+            document.getElementById('timer-display').innerText = `Temps : ${elapsedSeconds}s`;
+        }
+
+        function validateCurrentQuestion() {
+            const q = runData[currentQuestionIndex];
+            let selected = "";
+            let estCorrectData = null;
+
+            if(q.type === "qcm") {
+                const radios = document.getElementsByName(`q${currentQuestionIndex}`);
+                for(let r of radios) {
+                    if(r.checked) { selected = r.value; break; }
+                }
+                estCorrectData = (selected === q.correctAnswer);
+            } else {
+                selected = document.getElementById(`open-input-${currentQuestionIndex}`).value;
+                document.getElementById(`open-input-${currentQuestionIndex}`).disabled = true;
+                estCorrectData = "A vérifier manuellement par l'enseignant";
+            }
+
+            let timeTaken = isTimedMode ? elapsedSeconds : Math.floor((Date.now() - questionStartTime) / 1000);
+
+            studentAnswers.push({
+                questionId: q.id,
+                titre: q.title,
+                type: q.type,
+                reponseEleve: selected,
+                reponseAttendue: q.correctAnswer || q.attendu,
+                estCorrect: estCorrectData,
+                tempsPasseSecondes: timeTaken
+            });
+
+            document.getElementById(`corr-${currentQuestionIndex}`).classList.add('visible');
+
+            document.getElementById('btn-validate').style.display = 'none';
+            if (currentQuestionIndex < runData.length - 1) {
+                document.getElementById('btn-next').style.display = 'inline-block';
+            } else {
+                document.getElementById('btn-finish').style.display = 'inline-block';
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            showSlide(currentQuestionIndex);
+            
+            questionStartTime = Date.now();
+            elapsedSeconds = 0;
+            if(isTimedMode) updateTimer();
+        }
+
+        function finishSession() {
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('timer-display').style.display = 'none';
+            document.getElementById('btn-finish').style.display = 'none';
+            document.getElementById('btn-json').style.display = 'inline-block';
+
+            const slides = document.querySelectorAll('.question-slide');
+            slides.forEach((s) => s.classList.add('active'));
+
+            alert("Séance terminée. Les corrigés sont ouverts. Vous pouvez télécharger le suivi JSON ou imprimer le PDF.");
+        }
+
+        function exportJSON() {
+            const payload = {
+                dateTest: new Date().toISOString(),
+                modulesSelectionnes: {
+                    qcm: document.getElementById('mod-qcm').checked,
+                    sti2d: document.getElementById('mod-sti2d').checked,
+                    stl: document.getElementById('mod-stl').checked
+                },
+                chronometreActif: isTimedMode,
+                resultats: studentAnswers
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "suivi_eleve_variables_aleatoires.json");
+            dlAnchorElem.click();
+        }
+
+        function toggleDys() {
+            document.body.classList.toggle('dys-mode');
+            setTimeout(drawTree, 300);
+        }
+
+        function toggleContrast() {
+            document.body.classList.toggle('high-contrast-mode');
+            setTimeout(drawTree, 300);
+        }
+
+        function openModal() { document.getElementById('copyrightModal').style.display = 'block'; }
+        function closeModal() { document.getElementById('copyrightModal').style.display = 'none'; }
+        window.onclick = function(event) {
+            const modal = document.getElementById('copyrightModal');
+            if (event.target == modal) { modal.style.display = "none"; }
+        }
+
+        window.onload = function() {
+            drawTree();
+        };
+
+    </script>
+</body>
+</html>
